@@ -5,6 +5,22 @@ function findByText(tagList, text) {
     return nodes.find(el => el.textContent?.trim() === text) || null;
 }
 
+function getSettlementScope() {
+    const label = findByText(["div", "span", "h1", "h2", "h3"], "進帳資訊");
+    if (!label) return document;
+
+    let node = label;
+    while (node && node.parentElement) {
+        const t = node.innerText || "";
+        if (t.includes("商品") && t.includes("小計")) {
+            return node;
+        }
+        node = node.parentElement;
+    }
+
+    return label.parentElement || document;
+}
+
 function pickOrderIdFromText(text) {
     if (!text) return "";
     const lines = text
@@ -95,12 +111,11 @@ function getReceiverInfo() {
 // ===== 商品資訊 =====
 function getProductInfo() {
     const products = [];
-    let productImageUrl = "";
+    const scope = getSettlementScope();
 
     // 找出所有可能的商品行
-    // 在蝦皮訂單頁面，商品通常位於特定的 div 結構中
-    // 我們尋找包含數字 (編號) 的元素，然後往後尋找商品名稱與圖片
-    const allDivs = Array.from(document.querySelectorAll('div, span')).filter(el => {
+    // 限縮在「進帳資訊」區塊，避免抓到其他區塊的數字
+    const allDivs = Array.from(scope.querySelectorAll('div, span')).filter(el => {
         const text = el.textContent?.trim();
         return /^\d+$/.test(text) && text.length <= 2; // 尋找 1, 2, 3...
     });
@@ -118,28 +133,21 @@ function getProductInfo() {
 
         if (!container) continue;
 
-        // 優化圖片選擇邏輯：找出所有圖片並篩選出看起來像「商品主圖」的
-        const imgs = Array.from(container.querySelectorAll('img'));
-        const productImg = imgs.find(img => {
-            const src = img.src || "";
-            // 篩選條件：包含 shopee 網址，且排除太小的圖示 (通常寬度 > 40)
-            const isShopeeImg = src.includes('shopee') || src.includes('f.shopee');
-            const isNotIcon = img.width > 40 || img.naturalWidth > 40 || !src.includes('icon');
-            return isShopeeImg && isNotIcon;
-        });
-
-        const imgSrc = productImg ? productImg.src : (imgs[0] ? imgs[0].src : "");
-        if (!productImageUrl && imgSrc) productImageUrl = imgSrc;
-
-        // 擷取名稱與規格 (沿用文字分析邏輯，但在容器內找更精準)
+        // 在容器文字中，使用「目前編號 -> 下一個編號」做分段，避免重複抓前一項
         const containerLines = container.innerText.split('\n').map(l => l.trim()).filter(Boolean);
+        const startIdx = containerLines.indexOf(String(currentItemNumber));
+        if (startIdx === -1) continue;
+        const nextItemNumber = String(currentItemNumber + 1);
+        const nextIdx = containerLines.findIndex((line, idx) => idx > startIdx && line === nextItemNumber);
+        const segmentLines = containerLines.slice(startIdx + 1, nextIdx === -1 ? containerLines.length : nextIdx);
+
         let productName = "";
         let spec = "";
         let quantity = "1";
 
-        for (let i = 0; i < containerLines.length; i++) {
-            const line = containerLines[i];
-            if (line === String(currentItemNumber) || line.includes("圖片") || line.includes("賣家備貨")) continue;
+        for (let i = 0; i < segmentLines.length; i++) {
+            const line = segmentLines[i];
+            if (line.includes("圖片") || line.includes("賣家備貨") || line.includes("較長備貨")) continue;
 
             if (line.startsWith("規格:") || line.startsWith("無版本:")) {
                 spec = line.replace("規格:", "").replace("無版本:", "").trim();
@@ -166,6 +174,12 @@ function getProductInfo() {
             const qtyByUnit = line.match(/^(\d+)\s*件$/);
             if (qtyByUnit) {
                 quantity = qtyByUnit[1];
+                continue;
+            }
+
+            // fallback: 有些版面只有單獨數字欄位 (例如「1」)
+            if (/^\d{1,2}$/.test(line) && Number(line) > 0 && Number(line) <= 99) {
+                quantity = line;
             }
         }
 
@@ -179,11 +193,9 @@ function getProductInfo() {
     }
 
     console.log("[Extension] Found products summary:", products);
-    console.log("[Extension] Main product image URL (Optimized):", productImageUrl);
 
     return {
-        text: products.join("; \n") || "",
-        imageUrl: productImageUrl
+        text: products.join("; \n") || ""
     };
 }
 
@@ -391,7 +403,7 @@ async function extractV1() {
 
     const orderId = getOrderId();
     const { name, address, zipCode } = getReceiverInfo();
-    const { text: productInfo, imageUrl: productImageUrl } = getProductInfo();
+    const { text: productInfo } = getProductInfo();
     const estimatedIncome = getEstimatedIncome();
 
     // 取得包裹資訊
@@ -415,7 +427,6 @@ async function extractV1() {
         packageCode,
         phone,
         productInfo,
-        productImageUrl,
         estimatedIncome,
         pageUrl: location.href
     };

@@ -1,5 +1,5 @@
 // === 固定設定 ===
-const GAS_URL = "https://script.google.com/a/macros/feistore.com.tw/s/AKfycbxRp8iesCoqLqGho6BVcMZ0MpBAbpzRkDFh97WyU4GM2OGi7vGfmcYOb1QeUMrMd_Qh/exec";
+const GAS_URL = "https://script.google.com/a/macros/feistore.com.tw/s/AKfycbw8J0xtK3qZYCvQRmITymej7ld-OEW059vGELaaVqYxhIiB1mhM4dW5aMDs6DMO0hc/exec";
 // 請改成你自己的 Token（不要把真實 Token 提交到 Git）
 const DEFAULT_TOKEN = "FEISTORE_V1_20260207_GW9mQ3xL7kN2pR5t";
 
