@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Shopee PackageCode Exporter (V1)",
+  "version": "1.0.0",
+  "description": "在蝦皮訂單明細頁一鍵擷取包裹查詢碼並寫入 Google Sheet",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.shopee.tw/*",
+    "https://script.google.com/*",
+    "https://script.googleusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.shopee.tw/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

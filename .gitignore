@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Google Drive files
+*.gsheet
+
+# Sensitive data (if any)
+*.env
