@@ -58,8 +58,8 @@ function doPost(e) {
             incomeValue = parseFloat(incomeValue) || 0;
         }
 
-        // 建立一個長度為 26 的陣列 (A 到 Z)
-        let dataRow = new Array(26).fill("");
+        // 建立一個長度為 28 的陣列 (A 到 AB)
+        let dataRow = new Array(28).fill("");
 
         dataRow[0] = new Date();                  // A 擷取時間
         dataRow[3] = row.buyerName || "";         // D 收件人
@@ -70,6 +70,7 @@ function doPost(e) {
         dataRow[12] = incomeValue;                 // M 預估訂單進帳 (純數字)
         dataRow[17] = "蝦皮拍賣";                   // R 固定值
         dataRow[25] = orderId;                     // Z 訂單編號
+        dataRow[27] = row.zipCode || "";           // AB 郵遞區號
 
         sheet.appendRow(dataRow);
 

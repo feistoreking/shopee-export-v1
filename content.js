@@ -37,7 +37,7 @@ function getOrderId() {
 // ===== 收件人地址 =====
 function getReceiverInfo() {
     const label = findByText(["div", "span"], "買家收件地址");
-    if (!label) return { name: "", address: "" };
+    if (!label) return { name: "", address: "", zipCode: "" };
 
     const container = label.parentElement || label;
 
@@ -45,16 +45,32 @@ function getReceiverInfo() {
     const text = (container.innerText || "").trim();
     const lines = text.split('\n')
         .map(l => l.trim())
-        .filter(l => l && !l.includes("買家收件地址") && !l.includes("複製") && !l.includes("變更")); // 過濾掉標籤和按鈕文字
+        .filter(l => l && !l.includes("買家收件地址") && !l.includes("複製") && !l.includes("變更"));
 
-    // 假設格式：第一行是姓名，後續是地址
-    // 如果 lines 包含大量無關資訊（如 Modal 內容），則需要更嚴格過濾
-    // 透過過濾掉長度過長的無效行（例如包含 "方法" 或 "QRCode" 的說明文字）
     const validLines = lines.filter(l => !l.includes("方法") && !l.includes("QRCode") && !l.includes("蝦皮專線"));
 
+    let name = validLines[0] || "";
+    let fullAddress = validLines.slice(1).join(" ") || "";
+
+    // 1. 清理姓名 (移除結尾的逗號)
+    name = name.replace(/[,，]$/, "").trim();
+
+    // 2. 清理地址 (過濾「聯繫買家」與「聯絡買家」)
+    fullAddress = fullAddress.replace(/聯[絡繫]買家/g, "").trim();
+
+    // 3. 擷取郵遞區號 (地址開頭的數字)
+    let zipCode = "";
+    const zipMatch = fullAddress.match(/^\d+/);
+    if (zipMatch) {
+        zipCode = zipMatch[0];
+        // 從地址中移除郵遞區號部分
+        fullAddress = fullAddress.replace(/^\d+/, "").trim();
+    }
+
     return {
-        name: validLines[0] || "",
-        address: validLines.slice(1).join(" ") || ""
+        name,
+        address: fullAddress,
+        zipCode
     };
 }
 
@@ -333,7 +349,7 @@ async function extractV1() {
     await new Promise(r => setTimeout(r, 100));
 
     const orderId = getOrderId();
-    const { name, address } = getReceiverInfo();
+    const { name, address, zipCode } = getReceiverInfo();
     const productInfo = getProductInfo();
     const estimatedIncome = getEstimatedIncome();
 
@@ -354,6 +370,7 @@ async function extractV1() {
         orderId,
         buyerName: name,
         address,
+        zipCode,
         packageCode,
         phone,
         productInfo,
