@@ -100,9 +100,17 @@ function getProductInfo() {
 
         if (!container) continue;
 
-        // 在容器內尋找圖片
-        const img = container.querySelector('img');
-        const imgSrc = img ? img.src : "";
+        // 優化圖片選擇邏輯：找出所有圖片並篩選出看起來像「商品主圖」的
+        const imgs = Array.from(container.querySelectorAll('img'));
+        const productImg = imgs.find(img => {
+            const src = img.src || "";
+            // 篩選條件：包含 shopee 網址，且排除太小的圖示 (通常寬度 > 40)
+            const isShopeeImg = src.includes('shopee') || src.includes('f.shopee');
+            const isNotIcon = img.width > 40 || img.naturalWidth > 40 || !src.includes('icon');
+            return isShopeeImg && isNotIcon;
+        });
+
+        const imgSrc = productImg ? productImg.src : (imgs[0] ? imgs[0].src : "");
         if (!productImageUrl && imgSrc) productImageUrl = imgSrc;
 
         // 擷取名稱與規格 (沿用文字分析邏輯，但在容器內找更精準)
@@ -145,7 +153,7 @@ function getProductInfo() {
     }
 
     console.log("[Extension] Found products summary:", products);
-    console.log("[Extension] Main product image URL:", productImageUrl);
+    console.log("[Extension] Main product image URL (Optimized):", productImageUrl);
 
     return {
         text: products.join("; \n") || "",
