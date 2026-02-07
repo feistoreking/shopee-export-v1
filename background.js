@@ -1,5 +1,5 @@
 // === 固定設定 ===
-const GAS_URL = "https://script.google.com/a/macros/feistore.com.tw/s/AKfycbyDecR1DPPuvchcKGLglhT0NofFn4yBOXbyIKtO9TNSD36PdrsAqpHT_GZx3svD4F8t/exec";
+const GAS_URL = "https://script.google.com/a/macros/feistore.com.tw/s/AKfycbw3S6qG40K7L_rcZp96Xy42e16sLSox4vF7x77jsXOFegOZOw0NfrJNAFglwkI_CQmq/exec";
 const TOKEN = "FEISTORE_SHOPEE_EXPORT_V1_9fA3kQ7LxP2M6dR8WbZC";
 
 async function postToGAS(payload) {
