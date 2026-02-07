@@ -5,13 +5,25 @@ function findByText(tagList, text) {
     return nodes.find(el => el.textContent?.trim() === text) || null;
 }
 
-function findFirstMatch(regex) {
-    const nodes = document.querySelectorAll("div, span, p");
-    for (const el of nodes) {
-        const t = (el.textContent || "").trim();
-        if (regex.test(t)) return { el, text: t };
+function pickOrderIdFromText(text) {
+    if (!text) return "";
+    const lines = text
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.includes("訂單編號") && !l.includes("複製"));
+
+    for (const line of lines) {
+        const matches = line.match(/[A-Z0-9-]{8,30}/g) || [];
+        for (const candidate of matches) {
+            const normalized = candidate.replace(/-/g, "");
+            const hasDigit = /\d/.test(normalized);
+            const hasLetter = /[A-Z]/.test(normalized);
+            if (normalized.length >= 8 && hasDigit && (hasLetter || normalized.length >= 12)) {
+                return normalized;
+            }
+        }
     }
-    return null;
+    return "";
 }
 
 // ===== 訂單編號 =====
@@ -19,19 +31,25 @@ function getOrderId() {
     const label = findByText(["div", "span"], "訂單編號");
     if (!label) return "";
 
-    const container = label.parentElement || label;
-    const text = (container.innerText || "").trim();
-
-    // 嘗試從文字中提取 (排除 "訂單編號" 字樣)
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l && l !== "訂單編號");
-
-    for (const t of lines) {
-        if (/^[A-Z0-9]{8,}$/.test(t)) return t;
+    // 僅在「訂單編號」附近區塊尋找，避免誤抓頁面其他代碼
+    const candidates = [];
+    const parent = label.parentElement;
+    if (parent) {
+        candidates.push(parent.innerText || "");
+        if (parent.nextElementSibling) {
+            candidates.push(parent.nextElementSibling.innerText || "");
+        }
+        if (parent.parentElement && parent.parentElement.nextElementSibling) {
+            candidates.push(parent.parentElement.nextElementSibling.innerText || "");
+        }
     }
 
-    // Fallback: search globally if not found in container
-    const any = findFirstMatch(/\b[A-Z0-9]{8,}\b/);
-    return any?.text?.match(/\b[A-Z0-9]{8,}\b/)?.[0] || "";
+    for (const text of candidates) {
+        const id = pickOrderIdFromText(text);
+        if (id) return id;
+    }
+
+    return "";
 }
 
 // ===== 收件人地址 =====
@@ -118,7 +136,6 @@ function getProductInfo() {
         let productName = "";
         let spec = "";
         let quantity = "1";
-        let numericStrings = [];
 
         for (let i = 0; i < containerLines.length; i++) {
             const line = containerLines[i];
@@ -134,13 +151,22 @@ function getProductInfo() {
                 continue;
             }
 
-            if (line.match(/^[\d,]+$/) && line.length < 8) {
-                numericStrings.push(line);
+            const qtyByLabel = line.match(/數量\s*[:：]?\s*(\d+)/);
+            if (qtyByLabel) {
+                quantity = qtyByLabel[1];
+                continue;
             }
-        }
 
-        if (numericStrings.length >= 2) {
-            quantity = numericStrings[1];
+            const qtyByX = line.match(/[xX×]\s*(\d+)\b/);
+            if (qtyByX) {
+                quantity = qtyByX[1];
+                continue;
+            }
+
+            const qtyByUnit = line.match(/^(\d+)\s*件$/);
+            if (qtyByUnit) {
+                quantity = qtyByUnit[1];
+            }
         }
 
         if (productName) {

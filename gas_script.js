@@ -1,11 +1,16 @@
 // === 固定設定 ===
 const SPREADSHEET_ID = "1dey0fNMLc2MvYeWViPeyMwqQ8xtaPaeQFJi29StYYEA";
 const SHEET_NAME = "工作表1"; // 如果你的表不是這個名字，改這行
-const TOKEN = "FEISTORE_SHOPEE_EXPORT_V1_9fA3kQ7LxP2M6dR8WbZC";
+// 請改成你自己的 Token（不要把真實 Token 提交到 Git）
+const TOKEN = "FEISTORE_V1_20260207_GW9mQ3xL7kN2pR5t";
 
 // === 接收 Extension 資料 ===
 function doPost(e) {
     try {
+        if (!TOKEN || TOKEN === "REPLACE_WITH_YOUR_STRONG_TOKEN") {
+            return json_({ ok: false, error: "Server token 尚未設定" });
+        }
+
         const body = JSON.parse(e.postData?.contents || "{}");
 
         if (body.token !== TOKEN) {

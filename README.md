@@ -28,10 +28,11 @@
 4. 修改以下設定：
    - `SPREADSHEET_ID`: 您的 Google Sheet ID
    - `SHEET_NAME`: 工作表名稱（預設為「工作表1」）
-   - `TOKEN`: 自訂的安全 Token
+   - `TOKEN`: 自訂的安全 Token（請勿使用預設 `REPLACE_WITH_YOUR_STRONG_TOKEN`）
 5. 點擊 **部署** > **新增部署** > **網頁應用程式**
 6. 複製 Web App 網址
 7. 將網址更新到 `background.js` 的 `GAS_URL` 變數中
+8. 在 `background.js` 的 `DEFAULT_TOKEN` 設定相同 Token（或用 `chrome.storage.local.gasToken`）
 
 ## 使用方式
 
@@ -44,13 +45,16 @@
 ## 寫入的欄位
 
 - A: 擷取時間
-- B: 訂單編號
-- C: 收件人
-- D: 地址
-- E: 包裹查詢碼（完整物流字串）
-- F: 商品資訊
-- G: 預估訂單進帳
-- H: 訂單連結
+- D: 收件人
+- E: 地址
+- F: 包裹查詢碼（完整物流字串）
+- G: 商品圖片（`=IMAGE(...)`）
+- I: 商品資訊
+- K: 固定值「蝦皮付」
+- M: 預估訂單進帳（純數字）
+- R: 固定值「蝦皮拍賣」
+- Z: 訂單編號
+- AB: 郵遞區號
 
 ## 檔案說明
 

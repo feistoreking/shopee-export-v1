@@ -1,12 +1,23 @@
 // === 固定設定 ===
-const GAS_URL = "https://script.google.com/a/macros/feistore.com.tw/s/AKfycbyFZBRy0UeRgxcO4WgPoiRQDTY0iK5j7VezvaWNfQSELkUBogFhz3Ytuk7EQ2z8w93i/exec";
-const TOKEN = "FEISTORE_SHOPEE_EXPORT_V1_9fA3kQ7LxP2M6dR8WbZC";
+const GAS_URL = "https://script.google.com/a/macros/feistore.com.tw/s/AKfycbxRp8iesCoqLqGho6BVcMZ0MpBAbpzRkDFh97WyU4GM2OGi7vGfmcYOb1QeUMrMd_Qh/exec";
+// 請改成你自己的 Token（不要把真實 Token 提交到 Git）
+const DEFAULT_TOKEN = "FEISTORE_V1_20260207_GW9mQ3xL7kN2pR5t";
+
+async function getToken() {
+  const { gasToken } = await chrome.storage.local.get("gasToken");
+  const token = (gasToken || DEFAULT_TOKEN || "").trim();
+  if (!token || token === "REPLACE_WITH_YOUR_STRONG_TOKEN") {
+    throw new Error("請先設定 GAS Token（background.js 的 DEFAULT_TOKEN 或 chrome.storage.local.gasToken）");
+  }
+  return token;
+}
 
 async function postToGAS(payload) {
+  const token = await getToken();
   const res = await fetch(GAS_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: TOKEN, ...payload })
+    body: JSON.stringify({ token, ...payload })
   });
 
   const text = await res.text();
