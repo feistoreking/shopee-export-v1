@@ -51,16 +51,25 @@ function doPost(e) {
         // 加上單引號 ' 強制轉為文字，避免 Google Sheet 自動改成科學記號
         const safeCode = row.packageCode ? `'${row.packageCode}` : "";
 
+        // 處理進帳金額，轉為純數字 (移除 NT$, 逗號等)
+        let incomeValue = row.estimatedIncome || "";
+        if (typeof incomeValue === "string") {
+            incomeValue = incomeValue.replace(/[^\d.-]/g, ""); // 只保留數字、點、負號
+            incomeValue = parseFloat(incomeValue) || 0;
+        }
+
         // 建立一個長度為 26 的陣列 (A 到 Z)
         let dataRow = new Array(26).fill("");
 
         dataRow[0] = new Date();                  // A 擷取時間
-        dataRow[3] = row.buyerName || "";         // D 收件人 (Index 3)
-        dataRow[4] = row.address || "";           // E 地址 (Index 4)
-        dataRow[5] = safeCode;                    // F 包裹查詢碼 (Index 5)
-        dataRow[8] = row.productInfo || "";       // I 商品資訊 (Index 8)
-        dataRow[12] = row.estimatedIncome || "";   // M 預估訂單進帳 (Index 12)
-        dataRow[25] = orderId;                     // Z 訂單編號 (Index 25)
+        dataRow[3] = row.buyerName || "";         // D 收件人
+        dataRow[4] = row.address || "";           // E 地址
+        dataRow[5] = safeCode;                    // F 包裹查詢碼
+        dataRow[8] = row.productInfo || "";       // I 商品資訊
+        dataRow[10] = "蝦皮付";                     // K 固定值
+        dataRow[12] = incomeValue;                 // M 預估訂單進帳 (純數字)
+        dataRow[17] = "蝦皮拍賣";                   // R 固定值
+        dataRow[25] = orderId;                     // Z 訂單編號
 
         sheet.appendRow(dataRow);
 
