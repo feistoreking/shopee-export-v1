@@ -65,6 +65,12 @@ function doPost(e) {
         dataRow[3] = row.buyerName || "";         // D 收件人
         dataRow[4] = row.address || "";           // E 地址
         dataRow[5] = safeCode;                    // F 包裹查詢碼
+
+        // G 欄寫入商品圖片公式
+        if (row.productImageUrl) {
+            dataRow[6] = `=IMAGE("${row.productImageUrl}")`;
+        }
+
         dataRow[8] = row.productInfo || "";       // I 商品資訊
         dataRow[10] = "蝦皮付";                     // K 固定值
         dataRow[12] = incomeValue;                 // M 預估訂單進帳 (純數字)

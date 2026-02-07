@@ -76,74 +76,81 @@ function getReceiverInfo() {
 
 // ===== 商品資訊 =====
 function getProductInfo() {
-    const bodyText = document.body.innerText;
     const products = [];
-    const lines = bodyText.split('\n').map(l => l.trim()).filter(Boolean);
+    let productImageUrl = "";
 
-    // 策略：尋找編號 1, 2, 3... 來識別每個商品
+    // 找出所有可能的商品行
+    // 在蝦皮訂單頁面，商品通常位於特定的 div 結構中
+    // 我們尋找包含數字 (編號) 的元素，然後往後尋找商品名稱與圖片
+    const allDivs = Array.from(document.querySelectorAll('div, span')).filter(el => {
+        const text = el.textContent?.trim();
+        return /^\d+$/.test(text) && text.length <= 2; // 尋找 1, 2, 3...
+    });
+
     let currentItemNumber = 1;
 
-    while (currentItemNumber <= 10) { // 最多支援 10 個商品
-        let foundProduct = false;
+    for (const numberEl of allDivs) {
+        if (numberEl.textContent?.trim() !== String(currentItemNumber)) continue;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+        // 往父層找，直到找到包含該商品所有資訊的大容器
+        let container = numberEl.parentElement;
+        while (container && container.innerText.length < 50 && container.parentElement) {
+            container = container.parentElement;
+        }
 
-            // 找到編號（獨立一行，只有數字）
-            if (line === String(currentItemNumber)) {
-                let productName = "";
-                let spec = "";
-                let quantity = "1";
-                let numericStrings = [];
+        if (!container) continue;
 
-                // 往後找商品資訊
-                for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {
-                    const nextLine = lines[j];
+        // 在容器內尋找圖片
+        const img = container.querySelector('img');
+        const imgSrc = img ? img.src : "";
+        if (!productImageUrl && imgSrc) productImageUrl = imgSrc;
 
-                    if (nextLine.includes("賣家備貨") || nextLine.includes("圖片") || nextLine === "編號") continue;
+        // 擷取名稱與規格 (沿用文字分析邏輯，但在容器內找更精準)
+        const containerLines = container.innerText.split('\n').map(l => l.trim()).filter(Boolean);
+        let productName = "";
+        let spec = "";
+        let quantity = "1";
+        let numericStrings = [];
 
-                    // 1. 擷取規格
-                    if (nextLine.startsWith("規格:") || nextLine.startsWith("無版本:")) {
-                        spec = nextLine.replace("規格:", "").replace("無版本:", "").trim();
-                        continue;
-                    }
+        for (let i = 0; i < containerLines.length; i++) {
+            const line = containerLines[i];
+            if (line === String(currentItemNumber) || line.includes("圖片") || line.includes("賣家備貨")) continue;
 
-                    // 2. 擷取商品名稱
-                    if (!productName && nextLine.length > 5 && !nextLine.includes("NT$")) {
-                        productName = nextLine;
-                        continue;
-                    }
+            if (line.startsWith("規格:") || line.startsWith("無版本:")) {
+                spec = line.replace("規格:", "").replace("無版本:", "").trim();
+                continue;
+            }
 
-                    // 3. 收集純數字字串 (用於判定 單價, 數量, 小計)
-                    if (nextLine.match(/^[\d,]+$/) && nextLine.length < 8) {
-                        numericStrings.push(nextLine);
-                    }
+            if (!productName && line.length > 5 && !line.includes("NT$")) {
+                productName = line;
+                continue;
+            }
 
-                    if (lines[j] === String(currentItemNumber + 1)) break;
-                }
-
-                // 數量判定：在 [單價, 數量, 小計] 序列中，數量是第二個
-                if (numericStrings.length >= 2) {
-                    quantity = numericStrings[1];
-                }
-
-                if (productName) {
-                    let fullInfo = productName;
-                    if (spec) fullInfo += ` (${spec})`;
-                    fullInfo += ` X${quantity}`;
-                    products.push(fullInfo);
-                    foundProduct = true;
-                }
-
-                if (foundProduct) break;
+            if (line.match(/^[\d,]+$/) && line.length < 8) {
+                numericStrings.push(line);
             }
         }
-        if (!foundProduct) break;
-        currentItemNumber++;
+
+        if (numericStrings.length >= 2) {
+            quantity = numericStrings[1];
+        }
+
+        if (productName) {
+            let fullInfo = productName;
+            if (spec) fullInfo += ` (${spec})`;
+            fullInfo += ` X${quantity}`;
+            products.push(fullInfo);
+            currentItemNumber++;
+        }
     }
 
     console.log("[Extension] Found products summary:", products);
-    return products.join("; \n") || "";
+    console.log("[Extension] Main product image URL:", productImageUrl);
+
+    return {
+        text: products.join("; \n") || "",
+        imageUrl: productImageUrl
+    };
 }
 
 // ===== 預估訂單進帳 =====
@@ -350,7 +357,7 @@ async function extractV1() {
 
     const orderId = getOrderId();
     const { name, address, zipCode } = getReceiverInfo();
-    const productInfo = getProductInfo();
+    const { text: productInfo, imageUrl: productImageUrl } = getProductInfo();
     const estimatedIncome = getEstimatedIncome();
 
     // 取得包裹資訊
@@ -374,6 +381,7 @@ async function extractV1() {
         packageCode,
         phone,
         productInfo,
+        productImageUrl,
         estimatedIncome,
         pageUrl: location.href
     };
