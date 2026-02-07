@@ -22,14 +22,16 @@ function doPost(e) {
         }
 
         // === 檢查重複訂單編號 ===
-        const orderId = String(row.orderId || "").trim(); // 轉為字串並去除空白
+        // 訂單編號現在位於 Z 欄 (第 26 欄)
+        const orderId = String(row.orderId || "").trim();
 
         if (orderId) {
             const lastRow = sheet.getLastRow();
 
             // 如果有資料（不只標題列）
             if (lastRow > 1) {
-                const orderIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // B2:B{lastRow}
+                // 檢查 Z 欄 (Column 26) 是否有重複
+                const orderIds = sheet.getRange(2, 26, lastRow - 1, 1).getValues();
 
                 // 檢查是否已存在
                 for (let i = 0; i < orderIds.length; i++) {
@@ -49,16 +51,18 @@ function doPost(e) {
         // 加上單引號 ' 強制轉為文字，避免 Google Sheet 自動改成科學記號
         const safeCode = row.packageCode ? `'${row.packageCode}` : "";
 
-        sheet.appendRow([
-            new Date(),                  // A 擷取時間
-            orderId,                     // B 訂單編號（已經 trim 過）
-            row.buyerName || "",         // C 收件人
-            row.address || "",           // D 地址
-            safeCode,                    // E 包裹查詢碼
-            row.productInfo || "",       // F 商品資訊
-            row.estimatedIncome || "",   // G 預估訂單進帳
-            row.pageUrl || ""            // H 訂單連結
-        ]);
+        // 建立一個長度為 26 的陣列 (A 到 Z)
+        let dataRow = new Array(26).fill("");
+
+        dataRow[0] = new Date();                  // A 擷取時間
+        dataRow[3] = row.buyerName || "";         // D 收件人 (Index 3)
+        dataRow[4] = row.address || "";           // E 地址 (Index 4)
+        dataRow[5] = safeCode;                    // F 包裹查詢碼 (Index 5)
+        dataRow[8] = row.productInfo || "";       // I 商品資訊 (Index 8)
+        dataRow[12] = row.estimatedIncome || "";   // M 預估訂單進帳 (Index 12)
+        dataRow[25] = orderId;                     // Z 訂單編號 (Index 25)
+
+        sheet.appendRow(dataRow);
 
         return json_({ ok: true, message: "寫入成功" });
     } catch (err) {

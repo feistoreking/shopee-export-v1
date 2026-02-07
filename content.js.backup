@@ -64,70 +64,52 @@ function getProductInfo() {
     const products = [];
     const lines = bodyText.split('\n').map(l => l.trim()).filter(Boolean);
 
-    // 策略：尋找編號 1, 2, 3... 來識別每個商品
-    let currentItemNumber = 1;
+    // 策略：尋找所有「賣家備貨」標籤，每個都代表一個商品
+    const processedProducts = new Set(); // 避免重複
 
-    while (currentItemNumber <= 10) { // 最多支援 10 個商品
-        let foundProduct = false;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+        if (line.includes("賣家備貨")) {
+            // 往後找商品名稱（下一行通常是商品名稱）
+            if (i + 1 < lines.length) {
+                const productLine = lines[i + 1];
 
-            // 找到編號（獨立一行，只有數字）
-            if (line === String(currentItemNumber)) {
-                let productName = "";
-                let spec = "";
-                let quantity = "1";
-                let numericStrings = [];
+                // 確保不是數字、價格或其他無關資訊
+                if (productLine.length > 3 &&
+                    !productLine.match(/^\d+$/) &&
+                    !productLine.includes("NT$") &&
+                    !productLine.includes("編號") &&
+                    !productLine.includes("商品") &&
+                    !processedProducts.has(productLine)) { // 避免重複
 
-                // 往後找商品資訊
-                for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {
-                    const nextLine = lines[j];
-
-                    if (nextLine.includes("賣家備貨") || nextLine.includes("圖片") || nextLine === "編號") continue;
-
-                    // 1. 擷取規格
-                    if (nextLine.startsWith("規格:") || nextLine.startsWith("無版本:")) {
-                        spec = nextLine.replace("規格:", "").replace("無版本:", "").trim();
-                        continue;
+                    // 檢查是否有規格資訊（往後找2-5行）
+                    let spec = "";
+                    for (let j = i + 2; j < Math.min(i + 6, lines.length); j++) {
+                        if (lines[j].startsWith("規格:") || lines[j].startsWith("無版本:")) {
+                            spec = lines[j].replace("規格:", "").replace("無版本:", "").trim();
+                            break;
+                        }
+                        // 如果遇到下一個「賣家備貨」，就停止搜尋
+                        if (lines[j].includes("賣家備貨")) {
+                            break;
+                        }
                     }
 
-                    // 2. 擷取商品名稱
-                    if (!productName && nextLine.length > 5 && !nextLine.includes("NT$")) {
-                        productName = nextLine;
-                        continue;
+                    if (spec) {
+                        products.push(`${productLine} (${spec})`);
+                    } else {
+                        products.push(productLine);
                     }
 
-                    // 3. 收集純數字字串 (用於判定 單價, 數量, 小計)
-                    if (nextLine.match(/^[\d,]+$/) && nextLine.length < 8) {
-                        numericStrings.push(nextLine);
-                    }
-
-                    if (lines[j] === String(currentItemNumber + 1)) break;
+                    processedProducts.add(productLine);
                 }
-
-                // 數量判定：在 [單價, 數量, 小計] 序列中，數量是第二個
-                if (numericStrings.length >= 2) {
-                    quantity = numericStrings[1];
-                }
-
-                if (productName) {
-                    let fullInfo = productName;
-                    if (spec) fullInfo += ` (${spec})`;
-                    fullInfo += ` X${quantity}`;
-                    products.push(fullInfo);
-                    foundProduct = true;
-                }
-
-                if (foundProduct) break;
             }
         }
-        if (!foundProduct) break;
-        currentItemNumber++;
     }
 
-    console.log("[Extension] Found products summary:", products);
-    return products.join("; \n") || "";
+    console.log("[Extension] Found products:", products);
+    return products.join("; ") || "";
 }
 
 // ===== 預估訂單進帳 =====
